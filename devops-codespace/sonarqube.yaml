@@ -1,0 +1,130 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarqube
+  labels:
+    app: sonarqube
+spec:
+  ports:
+  - name: sonarqube
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app: sonarqube
+    deploymentconfig: sonarqube
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    description: Route for SonarQube's http service.
+  name: sonarqube
+  labels:
+    app: sonarqube
+spec:
+  to:
+    kind: Service
+    name: sonarqube
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: sonarqube
+    deploymentconfig: sonarqube
+  name: sonarqube
+spec:
+  replicas: 1
+  selector:
+    app: sonarqube
+    deploymentconfig: sonarqube
+  strategy:
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: '0.2'
+      limits:
+        memory: 2Gi
+        cpu: '0.5'
+    type: Rolling
+  template:
+    metadata:
+      annotations:
+        openshift.io/container.sonarqube.image.entrypoint: '["./bin/run.sh"]'
+      creationTimestamp: null
+      labels:
+        app: sonarqube
+        deploymentconfig: sonarqube
+    spec:
+      containers:
+      - image: 'registry-quay-clientprod.apps.ocpmgmt.navan.accenture.com/svc_quayprod/sonarqube:latest'
+        imagePullPolicy: IfNotPresent
+        
+        name: sonarqube
+        ports:
+        - containerPort: 9000
+          protocol: TCP
+        livenessProbe:
+          failureThreshold: 5
+          initialDelaySeconds: 180
+          periodSeconds: 20
+          successThreshold: 1
+          httpGet:
+            port: 9000
+            path: /live
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 5
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          successThreshold: 1
+          httpGet:
+            port: 9000
+            path: /ready
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: '0.2'
+            memory: 1Gi
+          limits:
+            cpu: '0.5'
+            memory: 2Gi
+        terminationMessagePath: /dev/termination-log
+        volumeMounts:
+        - mountPath: /opt/sonarqube/data
+          name: sonarqube-data
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: sonarqube-data
+        persistentVolumeClaim:
+          claimName: sonarqube-data
+  triggers:
+  - type: ConfigChange
+---  
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  #storageClassName: "${STORAGE_CLASS_NAME}"

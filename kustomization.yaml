@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./devops-codespace/jenkins.yaml
+  - ./devops-codespace/nexus.yaml
+  - ./devops-codespace/selenium-hub.yaml
+  - ./devops-codespace/selenium-node-firefox.yaml
+  - ./devops-codespace/selenium-node-chrome.yaml
+  - ./devops-codespace/sonarqube.yaml
