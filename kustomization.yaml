@@ -7,5 +7,3 @@ resources:
   - ./devops-codespace/selenium-node-firefox.yaml
   - ./devops-codespace/selenium-node-chrome.yaml
   - ./devops-codespace/sonarqube.yaml
-
-  lkjsd
